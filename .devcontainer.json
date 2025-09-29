@@ -1,0 +1,12 @@
+{
+  "name": "461T Development Environment",
+  "image": "nuudlman/461t:latest",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cmake-tools",
+        "llvm-vs-code-extensions.vscode-clangd"
+      ]
+    }
+  }
+}

@@ -1,0 +1,5 @@
+add_executable(cgen)
+target_sources(cgen PRIVATE cgen_main.cpp)
+target_link_libraries(cgen PRIVATE lab3)
+target_compile_options(cgen PRIVATE -O3 -fsanitize=address,undefined -fsanitize-address-use-after-scope)
+target_link_options(cgen PRIVATE -fsanitize=address,undefined)
