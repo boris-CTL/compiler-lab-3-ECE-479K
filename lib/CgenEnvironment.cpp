@@ -21,8 +21,7 @@ CgenNode *CgenEnvironment::typeToClass(Symbol t) const {
 }
 
 llvm::Value *CgenEnvironment::findInScopes(Symbol name) {
-  // TODO: implement
-  return nullptr;
+  return this->varTable.find_in_scopes(name);
 }
 
 llvm::BasicBlock *CgenEnvironment::newBbAtFend(std::string const &name) const {
@@ -54,10 +53,18 @@ AllocaInst *CgenEnvironment::insertAllocaAtHead(Type *ty, const Twine &name) con
 
 
 llvm::Type *CgenEnvironment::getType(Symbol decl) const {
-  // TODO: implement
+  // 
 }
 llvm::Value *CgenEnvironment::getDefaultInit(Symbol type) const {
-  // TODO: implement
+  if(type == Int){
+    return ConstantInt::get(this->i32, 0);
+  } else if(type == Bool){
+    return ConstantInt::get(this->i1, 0);
+  }
+
+  CgenNode *this_class = this->typeToClass(type);
+  Function *init_func = this->theModule.getFunction(this_class->getInitFunctionName());
+  return this->builder.CreateCall(init_func, {});
 }
 llvm::Value *CgenEnvironment::box(llvm::Value *src, Symbol from) const {
   // TODO: implement

@@ -37,7 +37,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 # Get all of LLVM's cmake stuff, so we can find things like FileCheck
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-include(AddLLVM)
+# include(AddLLVM)
 
 set_property(GLOBAL PROPERTY CTEST_TARGETS_ADDED 1) # prevent stupid "convenience" targets from being added
 include(CTest)

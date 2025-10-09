@@ -84,6 +84,15 @@ public:
 
   // You may add more functions here as necessary
 
+  Value *get_attr_ptr(CgenNode *cur_class, std::string name, Value *obj_ptr){
+    int idx = cur_class->find_idx(name);
+    if(idx == -1){
+      return nullptr;
+    }
+
+    return this->builder.CreateStructGEP(cur_class->getType(), obj_ptr, idx);
+  }
+
 private:
   cool::SymbolTable<llvm::Value> varTable;
   CgenNode *curClass;

@@ -12,6 +12,33 @@
 
 class CgenNode;
 
+/*********************************************************************
+For convenience, a large number of symbols are predefined here.
+These symbols include the primitive type and method names, as well
+as fixed names used by the runtime system. Feel free to add your
+own definitions as you see fit.
+*********************************************************************/
+extern Symbol
+    // required classes
+    Object,
+    IO, String, Int, Bool, Main,
+
+    // class methods
+    cool_abort, type_name, cool_copy, out_string, out_int, in_string, in_int,
+    length, concat, substr,
+
+    // class members
+    val,
+
+    // special symbols
+    No_class,  // symbol that can't be the name of any user-defined class
+    No_type,   // If e : No_type, then no code is generated for e.
+    SELF_TYPE, // Special code is generated for new SELF_TYPE.
+    self,      // self generates code differently than other references
+
+    // extras
+    arg, arg2, newobj, Mainmain, prim_string, prim_int, prim_bool;
+
 // CgenClassTable represents the top level of a Cool program, which is
 // basically a list of classes. The class table is used to look up classes
 // (CgenNodes) by name, and it also handles global code generation tasks.
@@ -71,6 +98,16 @@ public:
   //       you can define them in CgenEnvironment or in cool_tree.handcode.h
   //       instead for the appropriate class.
 
+  llvm::Type *get_llvm_type_from_symbol(Symbol sym){
+    if(sym == Int){
+      return i32;
+    }else if(sym == Bool){
+      return i1;
+    }else{
+      return ptr;
+    }
+  }
+
   // CgenClassTable owns the current LLVM module and everything attached.
   // One program, one class table, one module.
   llvm::LLVMContext context;
@@ -82,31 +119,5 @@ public:
   llvm::PointerType *ptr;
 };
 
-/*********************************************************************
-For convenience, a large number of symbols are predefined here.
-These symbols include the primitive type and method names, as well
-as fixed names used by the runtime system. Feel free to add your
-own definitions as you see fit.
-*********************************************************************/
-extern Symbol
-    // required classes
-    Object,
-    IO, String, Int, Bool, Main,
-
-    // class methods
-    cool_abort, type_name, cool_copy, out_string, out_int, in_string, in_int,
-    length, concat, substr,
-
-    // class members
-    val,
-
-    // special symbols
-    No_class,  // symbol that can't be the name of any user-defined class
-    No_type,   // If e : No_type, then no code is generated for e.
-    SELF_TYPE, // Special code is generated for new SELF_TYPE.
-    self,      // self generates code differently than other references
-
-    // extras
-    arg, arg2, newobj, Mainmain, prim_string, prim_int, prim_bool;
 
 #endif // CGENCLASSTABLE_H

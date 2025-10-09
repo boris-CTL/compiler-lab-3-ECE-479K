@@ -6,6 +6,9 @@
 #include "symbol.h"
 #include <llvm/ADT/SmallVector.h>
 #include <span>
+#include <vector>
+
+using namespace llvm;
 
 // Each CgenNode corresponds to a Cool class. As such, it is responsible for
 // performing code generation on the class level. This includes laying out
@@ -13,6 +16,34 @@
 // generating code for each of its methods.
 class CgenNode : public class__class {
 public:
+
+  std::vector<std::tuple<Type *, attr_class *>> attribute_layout;
+  std::vector<std::tuple<std::string, method_class *>> method_layout;
+
+  std::tuple<Type *, attr_class *> insert_attribute(Symbol type_decl, attr_class *attr){
+    Type *type = this->getClasstable().get_llvm_type_from_symbol(type_decl);
+    std::tuple<Type *, attr_class *> entry = std::tuple<Type *, attr_class *>(type, attr);
+    attribute_layout.push_back(entry);
+    return entry;
+  }
+
+  std::tuple<std::string, method_class *> insert_method(std::string method_name, method_class *meth){
+    std::string meth_name = this->getFullMethodName(method_name);
+    std::tuple<std::string, method_class *> entry = std::tuple<std::string, method_class *>(meth_name, meth);
+    method_layout.push_back(entry);
+    return entry;
+  }
+
+  int find_idx(std::string name){
+    for(int i=0; i<this->attribute_layout.size(); i++){
+      auto [attr_type, attr_obj] = this->attribute_layout[i];
+      if(name == attr_obj->get_name()->get_string()){
+        return i + 1;
+      }
+    }
+    return -1;
+  }
+
   enum Basicness { Basic, NotBasic };
   CgenNode(Class_ c, Basicness bstatus, CgenClassTable *classTable)
       : class__class(static_cast<class__class const &>(*c)), parentnd(nullptr), children(0),
@@ -44,6 +75,10 @@ public:
     return "_" + getTypeName() + "_vtable_prototype";
   }
   std::string getInitFunctionName() const { return getTypeName() + "_new"; }
+
+  std::string getFullMethodName(std::string method_name) const {
+    return getTypeName() + "_" + method_name;
+  }
 
   llvm::StructType *getType() const;
   llvm::StructType *getVtableType() const;
