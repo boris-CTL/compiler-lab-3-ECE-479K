@@ -55,6 +55,7 @@ AllocaInst *CgenEnvironment::insertAllocaAtHead(Type *ty, const Twine &name) con
 llvm::Type *CgenEnvironment::getType(Symbol decl) const {
   // 
 }
+
 llvm::Value *CgenEnvironment::getDefaultInit(Symbol type) const {
   if(type == Int){
     return ConstantInt::get(this->i32, 0);
@@ -63,9 +64,22 @@ llvm::Value *CgenEnvironment::getDefaultInit(Symbol type) const {
   }
 
   CgenNode *this_class = this->typeToClass(type);
+  errs() << "OH GEE " << this_class->getInitFunctionName() << "\n";
   Function *init_func = this->theModule.getFunction(this_class->getInitFunctionName());
   return this->builder.CreateCall(init_func, {});
 }
+
+llvm::Value *CgenEnvironment::getDefaultInit(Type *type) const {
+  if(type == this->i32){
+    return ConstantInt::get(this->i32, 0);
+  } else if(type == this->i1){
+    return ConstantInt::get(this->i1, 0);
+  }
+
+  return nullptr;
+}
+
+
 llvm::Value *CgenEnvironment::box(llvm::Value *src, Symbol from) const {
   // TODO: implement
 }

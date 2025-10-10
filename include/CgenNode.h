@@ -16,14 +16,13 @@ using namespace llvm;
 // generating code for each of its methods.
 class CgenNode : public class__class {
 public:
-
   std::vector<std::tuple<Type *, attr_class *>> attribute_layout;
   std::vector<std::tuple<std::string, method_class *>> method_layout;
 
   std::tuple<Type *, attr_class *> insert_attribute(Symbol type_decl, attr_class *attr){
     Type *type = this->getClasstable().get_llvm_type_from_symbol(type_decl);
     std::tuple<Type *, attr_class *> entry = std::tuple<Type *, attr_class *>(type, attr);
-    attribute_layout.push_back(entry);
+    this->attribute_layout.push_back(entry);
     return entry;
   }
 
@@ -47,7 +46,8 @@ public:
   enum Basicness { Basic, NotBasic };
   CgenNode(Class_ c, Basicness bstatus, CgenClassTable *classTable)
       : class__class(static_cast<class__class const &>(*c)), parentnd(nullptr), children(0),
-        basicStatus(bstatus), classTable(*classTable), tag(-1) {}
+        basicStatus(bstatus), classTable(*classTable), tag(-1) {
+        }
 
   // Relationships with other nodes in the tree
   void setParent(CgenNode *p) {

@@ -30,57 +30,58 @@ using namespace llvm;
 // after you create a simple codegen_mainmain().
 
 void CgenClassTable::codeMain() {
-  // TODO: add code here
+    // TODO: add code here
 
-  Function *main_func = this->createLlvmFunction("main", this->i32, {}, false);
-  BasicBlock *BB = BasicBlock::Create(this->context, "entry", main_func);
-  builder.SetInsertPoint(BB);
+    Function *main_func = this->createLlvmFunction("main", this->i32, {}, false);
+    BasicBlock *BB = BasicBlock::Create(this->context, "entry", main_func);
+    builder.SetInsertPoint(BB);
 
-  CgenNode *main_cls = this->getMainMain(this->root());
-  Function *main_init_func = theModule.getFunction(main_cls->getInitFunctionName());
+    CgenNode *main_cls = this->getMainMain(this->root());
+    Function *main_init_func = theModule.getFunction(main_cls->getInitFunctionName());
 
-  Value *main_obj = builder.CreateCall(main_init_func, {});
+    Value *main_obj = builder.CreateCall(main_init_func, {});
 
-  Function *main_main_func = theModule.getFunction(main_cls->getFullMethodName("main"));
+    Function *main_main_func = theModule.getFunction(main_cls->getFullMethodName("main"));
 
-  Value *main_main_ret_val = builder.CreateCall(main_main_func, {main_obj});
+    Value *main_main_ret_val = builder.CreateCall(main_main_func, {main_obj});
 
-  Constant *main_main_ret_string_fmt = builder.CreateGlobalString("Main.main() returned %d\n", ".str");
-  Function *printf_fn = theModule.getFunction("printf");
-  assert(printf_fn && "printf function not found");
-  builder.CreateCall(printf_fn, {main_main_ret_string_fmt, main_main_ret_val});
+    Constant *main_main_ret_string_fmt = builder.CreateGlobalString("Main.main() returned %d\n", ".str");
+    Function *printf_fn = theModule.getFunction("printf");
+    assert(printf_fn && "printf function not found");
+    builder.CreateCall(printf_fn, {main_main_ret_string_fmt, main_main_ret_val});
 
-  builder.CreateRet(ConstantInt::get(this->i32, 0));
-  
-  // TODO: In Lab 3 you will have to allocate the Main object on the heap
-  //       and initialize it somehow. There are multiple good ways to do this.
-  // HINT: This will involve calling the constructor
+    builder.CreateRet(ConstantInt::get(this->i32, 0));
 
-  // TODO: Call Main_main(). This returned int for Lab 2 and Lab 3 CP1
-  //       Later it will return the appropriate type defined in the
-  //       Cool program.
-  // HINT: Copy from Lab 2 initially, but don't forget to pass in the object
-  //       pointer you allocated above.
+    // TODO: In Lab 3 you will have to allocate the Main object on the heap
+    //       and initialize it somehow. There are multiple good ways to do this.
+    // HINT: This will involve calling the constructor
 
+    // TODO: Call Main_main(). This returned int for Lab 2 and Lab 3 CP1
+    //       Later it will return the appropriate type defined in the
+    //       Cool program.
+    // HINT: Copy from Lab 2 initially, but don't forget to pass in the object
+    //       pointer you allocated above.
 
-  // TODO: Call printf with the string address of "Main_main() returned %d\n"
-  // and the return value of Main_main() as its arguments
-  // TODO:  Remove this after Lab 3 CP1.
+    // TODO: Call printf with the string address of "Main_main() returned %d\n"
+    // and the return value of Main_main() as its arguments
+    // TODO:  Remove this after Lab 3 CP1.
 
-  // Insert return 0
+    // Insert return 0
 }
 
 // For Lab 3 CP1, we will use the same approach as with Lab 2
 // code-gen function main() in class Main
 void CgenNode::codegenMainmain() {
-  // Copy code from Lab 2 initially, later just handle as part of
-  // Setting up class Main.
-  assert(this->name->get_string() == "Main");
-  for (auto *f : features) {
-    if (f->get_name()->get_string() == "main") {
-      f->code(new CgenEnvironment(this));
-    }
-  }
+    // Copy code from Lab 2 initially, later just handle as part of
+    // Setting up class Main.
+    assert(this->name->get_string() == "Main");
+
+    codeClass();
+    // for (auto *f : features) {
+    //   if (f->get_name()->get_string() == "main") {
+    //     f->code(new CgenEnvironment(this));
+    //   }
+    // }
 }
 
 /*********************************************************************
@@ -100,104 +101,112 @@ void CgenNode::codegenMainmain() {
 //  - create global definitions used by the class such as the class vtable
 //
 void CgenNode::setup(int tag, int depth) {
-  this->tag = tag;
+    this->tag = tag;
 
-  // TODO: Layout the features of the class by implementing
-  //      layoutFeatures(), which is called from here.
-  layoutFeatures();
+    // TODO: Layout the features of the class by implementing
+    //      layoutFeatures(), which is called from here.
+    layoutFeatures();
 
-  this->getType();
+    this->getType();
 
-  // TODO: CP2 below this point
-  // TODO: Create the global vtable instance
-  // HINT: This will be a llvm::GlobalVariable. You should leak it (e.g. `new GlobalVariable(...)`)
+    // TODO: CP2 below this point
+    // TODO: Create the global vtable instance
+    // HINT: This will be a llvm::GlobalVariable. You should leak it (e.g. `new GlobalVariable(...)`)
 
-  // HINT: Don't forget the metadata (including a raw character
-  //       string for the type name)
-  // HINT: You can get the allocated size of a type with
-  //       llvm::DataLayout;
+    // HINT: Don't forget the metadata (including a raw character
+    //       string for the type name)
+    // HINT: You can get the allocated size of a type with
+    //       llvm::DataLayout;
 }
 
 // Laying out the features involves creating a Function for each method
 // and assigning each attribute a slot in the class structure.
 void CgenNode::layoutFeatures() {
 
-  for(auto feature : this->features){ // Layout features of this class
-    feature->layout_feature(this);
-  }
+    for (auto feature : this->features) {  // Layout features of this class
+        feature->layout_feature(this);
+    }
 
-  for(auto feature : this->parentnd->features){ // Layout features of parent class this class inherits from
-    feature->layout_feature(this);
-  }
+    CgenNode *rent = this->getParentnd();
+
+    while (rent!= nullptr) {
+
+        for (auto feature : rent->features){
+            feature->layout_feature(this);
+        }
+        rent = rent->getParentnd();
+    }
 }
 
 // Assign this attribute a slot in the class structure
 void attr_class::layout_feature(CgenNode *cls) {
-  // TODO: add code here to add an attribute to the layout
-  // HINT: Consider inheritance, byt remember that new definitions
-  //       of an argument ID are added, leaving the previous ones
-  //       alone to correctly and easily deal with inheritance
-  cls->insert_attribute(this->type_decl, this);
+    // TODO: add code here to add an attribute to the layout
+    // HINT: Consider inheritance, byt remember that new definitions
+    //       of an argument ID are added, leaving the previous ones
+    //       alone to correctly and easily deal with inheritance
+    cls->insert_attribute(this->type_decl, this);
 }
 
 // Create the LLVM Function corresponding to this method.
 void method_class::layout_feature(CgenNode *cls) {
-  // TODO: CP2 -- not needed in CP1
+    // TODO: CP2 -- not needed in CP1
 
-  // TODO: Declare the method and add it to the class
-  // HINT: use the method formals and the helper function from ClassTable
-  // HINT: Use the methods in CgenNode to find names for things
-  // HINT: You will need to think about how to handle inheritance
-  // HINT: Declare the function similarly to what you did in Lab 2 for
-  // Main_main()
-  //       though at this point you are only adding a declaration, with the
-  //       actual definition happening in the second pass (in code_class()).
-  // HINT: Look at the definition of code_class in ClassTable or step through
-  // debug.
+    // TODO: Declare the method and add it to the class
+    // HINT: use the method formals and the helper function from ClassTable
+    // HINT: Use the methods in CgenNode to find names for things
+    // HINT: You will need to think about how to handle inheritance
+    // HINT: Declare the function similarly to what you did in Lab 2 for
+    // Main_main()
+    //       though at this point you are only adding a declaration, with the
+    //       actual definition happening in the second pass (in code_class()).
+    // HINT: Look at the definition of code_class in ClassTable or step through
+    // debug.
+    std::string method_name = cls->getFullMethodName(this->get_name()->get_string());
+    if(cls->getClasstable().theModule.getFunction(method_name)){
+        return;
+    }
+    
+    auto [meth_name, meth] = cls->insert_method(this->get_name()->get_string(), this);
+    Type *ret_type = cls->getClasstable().get_llvm_type_from_symbol(this->return_type);
+    std::vector<Type *> formal_types;
+    formal_types.push_back(cls->getClasstable().ptr);  // self obj
+    for (auto formal : this->formals) {
+        formal_types.push_back(cls->getClasstable().get_llvm_type_from_symbol(formal->get_type_decl()));
+    }
 
-  auto [meth_name, meth] = cls->insert_method(this->get_name()->get_string(), this);
-  Type *ret_type = cls->getClasstable().get_llvm_type_from_symbol(this->return_type);
-  std::vector<Type *> formal_types;
-  formal_types.push_back(cls->getClasstable().ptr); // self obj
-  for(auto formal : this->formals){
-    formal_types.push_back(cls->getClasstable().get_llvm_type_from_symbol(formal->get_type_decl()));
-  }
-
-  cls->getClasstable().createLlvmFunction(meth_name, ret_type, formal_types, false);
+    cls->getClasstable().createLlvmFunction(meth_name, ret_type, formal_types, false);
 }
 
 StructType *CgenNode::getType() const {
+    if (body) {
+        assert(body->isSized());
+        return body;
+    }
 
-  if (body) {
-    assert(body->isSized());
-    return body;
-  }
+    std::vector<Type *> attr_types;
+    attr_types.push_back(this->getClasstable().ptr);  // For Vtable
+    for (int i = 0; i < this->attribute_layout.size(); i++) {
+        Type *attr_type = std::get<0>(this->attribute_layout[i]);
+        attr_types.push_back(attr_type);
+    }
 
-  std::vector<Type *> attr_types;
-  attr_types.push_back(this->getClasstable().ptr); // For Vtable
-  for(int i = 1; i < this->attribute_layout.size(); i++){
-    Type *attr_type = std::get<0>(this->attribute_layout[i]);
-    attr_types.push_back(attr_type);
-  }
-
-  StructType *this_class_type = StructType::create(this->getClasstable().context, this->getTypeName());
-  this_class_type->setBody(attr_types, false);
-  body = this_class_type;
-  return this_class_type;
+    StructType *this_class_type = StructType::create(this->getClasstable().context, this->getTypeName());
+    this_class_type->setBody(attr_types, false);
+    body = this_class_type;
+    return this_class_type;
 }
 
 // TODO: Use information from feature layout to create the vtable type.
 //       Make sure to use get_type_name() for the name of the class type
 // Ignore padding
 StructType *CgenNode::getVtableType() const {
-  if (vtable) {
-    assert(vtable->isSized());
-    return vtable;
-  }
-  // TODO: initalize the vtable type
-  assert(false && "todo");
+    if (vtable) {
+        assert(vtable->isSized());
+        return vtable;
+    }
+    // TODO: initalize the vtable type
+    assert(false && "todo");
 }
-
 
 /*********************************************************************
 
@@ -208,55 +217,65 @@ StructType *CgenNode::getVtableType() const {
 // Class codegen. This should be performed after every class has been set up.
 // Generate code for each method of the class.
 void CgenNode::codeClass() {
-  // No code generation for basic classes. The runtime will handle that.
-  if (basic()) {
-    return;
-  }
-  // TODO: add code here for programmer-defined classes
-  // HINT: You'll need an environment and generate code for each method,
-  //       including the initializer for an object (a.k.a. constructor).
+    // No code generation for basic classes. The runtime will handle that.
+    if (basic()) {
+        return;
+    }
 
-  CgenEnvironment *env = new CgenEnvironment(this);
+    // TODO: add code here for programmer-defined classes
+    // HINT: You'll need an environment and generate code for each method,
+    //       including the initializer for an object (a.k.a. constructor).
 
-  this->codeInitFunction(env);
+    CgenEnvironment *env = new CgenEnvironment(this);
 
-  for(auto [method_name, method] : this->method_layout){
-    method->code(env);
-  }
+    this->codeInitFunction(env);
+
+    for (auto [method_name, method] : this->method_layout) {
+        errs() << "Class: " << this->name->get_string() << "\tmethod: " << method_name << "\n";
+        Function *current_method_dec = this->getClasstable().theModule.getFunction(method_name);
+        BasicBlock *entry_BB = BasicBlock::Create(this->getClasstable().context, "entry", current_method_dec);
+        env->builder.SetInsertPoint(entry_BB);
+        method->code(env);
+    }
 }
 
 void CgenNode::codeInitFunction(CgenEnvironment *env) {
-  // TODO: Add code here for class initialization (constructor)
-  // HINT: You can choose to allocate memory with malloc here, or
-  //       you can decide to do it elsewhere.
-  // HINT: To allocate memory, generate a call to malloc with
-  //       IRBuilder that will be emitted into the LLVM bitcode
-  //       and run at runtime. We suggest that you do *not*
-  //       use builder.CreateMalloc().
-  // HINT: You may find theModule.getNamedGlobal() useful.
-  // HINT: You may find llvm::StructType::getTypeByName() useful.
-  // HINT: You will need to use builder.CreateStructGEP().
-  // If you are doing garbage collection, type-aware allocation is highly recommended
-  // e.g. use LLVM's type-aware allocation facilities to make sure that
-  // each object has a unique allocator and unique allocation pool
+    // TODO: Add code here for class initialization (constructor)
+    // HINT: You can choose to allocate memory with malloc here, or
+    //       you can decide to do it elsewhere.
+    // HINT: To allocate memory, generate a call to malloc with
+    //       IRBuilder that will be emitted into the LLVM bitcode
+    //       and run at runtime. We suggest that you do *not*
+    //       use builder.CreateMalloc().
+    // HINT: You may find theModule.getNamedGlobal() useful.
+    // HINT: You may find llvm::StructType::getTypeByName() useful.
+    // HINT: You will need to use builder.CreateStructGEP().
+    // If you are doing garbage collection, type-aware allocation is highly recommended
+    // e.g. use LLVM's type-aware allocation facilities to make sure that
+    // each object has a unique allocator and unique allocation pool
 
-  Function *init_func = env->createLlvmFunction(this->getInitFunctionName(), env->ptr, {});
-  BasicBlock *entry_bb = BasicBlock::Create(env->context, "entry", init_func, nullptr);
-  env->builder.SetInsertPoint(entry_bb);
+    Function *init_func = env->createLlvmFunction(this->getInitFunctionName(), env->ptr, {});
+    BasicBlock *entry_bb = BasicBlock::Create(env->context, "entry", init_func, nullptr);
+    env->builder.SetInsertPoint(entry_bb);
 
-  DataLayout DL = env->theModule.getDataLayout();
-  Value *class_alloc_size = ConstantInt::get(env->i64, DL.getTypeAllocSize(body));
-  Value *class_obj_ptr = env->builder.CreateCall(env->theModule.getFunction("malloc"), class_alloc_size, "alloc_classtype", nullptr);
+    DataLayout DL = env->theModule.getDataLayout();
+    Value *class_alloc_size = ConstantInt::get(env->i64, DL.getTypeAllocSize(body));
+    Value *class_obj_ptr = env->builder.CreateCall(env->theModule.getFunction("malloc"), class_alloc_size, "alloc_classtype", nullptr);
 
-  for(int i=0; i<attribute_layout.size(); i++){
-    auto [attr_type, cool_attr_obj] = this->attribute_layout[i];
-    Value *init_val = cool_attr_obj->code(env);
-    Value *attr_ptr = env->builder.CreateStructGEP(this->getType(), class_obj_ptr, i+1);
+    for (int i = 0; i < attribute_layout.size(); i++) {
+        auto [attr_type, cool_attr_obj] = this->attribute_layout[i];
+        Value *init_val = cool_attr_obj->code(env);
 
-    env->builder.CreateStore(init_val, attr_ptr);
-  }
+        if (init_val == nullptr) {
+            init_val = env->getDefaultInit(attr_type);
+        }
 
-  env->builder.CreateRet(class_obj_ptr);
+        Value *attr_ptr = env->builder.CreateStructGEP(this->getType(), class_obj_ptr, i + 1);
+
+        env->builder.CreateStore(init_val, attr_ptr);
+    }
+
+    env->builder.CreateRet(class_obj_ptr);
 }
 
 /*********************************************************************
@@ -273,79 +292,82 @@ void CgenNode::codeInitFunction(CgenEnvironment *env) {
 *********************************************************************/
 
 Value *attr_class::code(CgenEnvironment *env) {
-  // TODO: Add code here for emitting initializing an attribute
-  return this->init->code(env);
+    // TODO: Add code here for emitting initializing an attribute
+    return this->init->code(env);
 }
 
 // Create a method body
 Function *method_class::code(CgenEnvironment *env) {
-  if (cgen_debug) {
-    errs() << "method" << "\n";
-  }
+    if (cgen_debug) {
+        errs() << "method" << "\n";
+    }
 
-  // TODO: for CP1, you should be able to copy your code from Lab 2, but you
-  // will need
-  //       to grab the self pointer from the first argument of the function. See
-  //       hints below.
-  // TODO: For CP2, you will need to add code here to generate any method body,
-  // not just Main_main.
-  //       In P2, instead of defining the function here, you will have defined
-  //       it in layout_feature().
+    // TODO: for CP1, you should be able to copy your code from Lab 2, but you
+    // will need
+    //       to grab the self pointer from the first argument of the function. See
+    //       hints below.
+    // TODO: For CP2, you will need to add code here to generate any method body,
+    // not just Main_main.
+    //       In P2, instead of defining the function here, you will have defined
+    //       it in layout_feature().
 
-  Function *curr_meth = env->getFunction();
+    Function *curr_meth = env->getFunction();
 
-  env->openScope();
+    env->openScope();
 
-  Argument *self_arg = curr_meth->arg_begin();
-  if(self_arg != nullptr) env->addBinding(self, self_arg); // Add self obj to scope
+    Argument *self_arg = curr_meth->arg_begin();
+    if (self_arg != nullptr) env->addBinding(self, self_arg);  // Add self obj to scope
 
-  // Add bindings for parameters as local variables here
+    // Add bindings for parameters as local variables here
 
-  Value *ret_val = this->expr->code(env); // Code method body
-  env->builder.CreateRet(ret_val); // create return value
+    Value *ret_val = this->expr->code(env);  // Code method body
+    if (ret_val == nullptr) {
+        Type *ret_ty = curr_meth->getReturnType();
+        if (ret_ty == env->i32)
+            ret_val = ConstantInt::get(env->i32, 0);
+        else if (ret_ty == env->i1)
+            ret_val = ConstantInt::get(env->i1, 0);
+        else if (ret_ty == env->ptr)
+            ret_val = self_arg;
+    }
 
-  env->closeScope();
-  
-  // HINT: Recall that you can and should use helper functions from the include
-  // files
-  //       and especially CgenEnvironment.h
-  // HINT: Recall that every LLVM procedure needs and entry basic block
-  // HINT: Look at the IRBuilder tutorial and/or documentation for help
-  // HINT: The names of the class and method are available as a Symbol in the
-  //       class (through the environment) and the method (using the "this"
-  //       pointer). You can turn symbols to strings with ->get_string().
+    env->builder.CreateRet(ret_val);  // create return value
 
-  // HINT: You may find Function* func->arg_begin() useful to iterate over
-  // arguments,
-  //       but you may not need it depending on how you chose to implement
-  //       things overall.
+    env->closeScope();
 
-  return curr_meth;
+    // HINT: Recall that you can and should use helper functions from the include
+    // files
+    //       and especially CgenEnvironment.h
+    // HINT: Recall that every LLVM procedure needs and entry basic block
+    // HINT: Look at the IRBuilder tutorial and/or documentation for help
+    // HINT: The names of the class and method are available as a Symbol in the
+    //       class (through the environment) and the method (using the "this"
+    //       pointer). You can turn symbols to strings with ->get_string().
+
+    // HINT: You may find Function* func->arg_begin() useful to iterate over
+    // arguments,
+    //       but you may not need it depending on how you chose to implement
+    //       things overall.
+
+    return curr_meth;
 }
 
 // Expression to create a new object
 Value *new__class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "newClass" << "\n";
-  // TODO: add code here and replace `return nullptr`
+    if (cgen_debug)
+        errs() << "newClass" << "\n";
+    // TODO: add code here and replace `return nullptr`
 
-  // HINT: This is where you will need to allocate memory for the object
-  //       and call the constructor. You can choose to allocate memory here
-  //       or in the constructor. Coolrt does it in the constructor.
+    // HINT: This is where you will need to allocate memory for the object
+    //       and call the constructor. You can choose to allocate memory here
+    //       or in the constructor. Coolrt does it in the constructor.
 
-  return env->getDefaultInit(this->get_type());
+    return env->getDefaultInit(this->get_type());
 }
 
-// Codegen for expressions. Note that each expression has a value.
-// HINT: Think about what each of these generates code for and read
-//       the Cool manual carefully and the longer CoolAid document
-// HINT: If you type this->, the IDE will show you all the members
-//       you have access to. The include files have them too, of course.
-// TODO: Many of these are just copied over from Lab 2
-
 Value *int_const_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "Integer Constant" << "\n";
+    if (cgen_debug)
+        errs() << "Integer Constant" << "\n";
 
     long long int_val = std::stoll(this->token->get_string());
 
@@ -353,39 +375,39 @@ Value *int_const_class::code(CgenEnvironment *env) {
 }
 
 Value *bool_const_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "Boolean Constant" << "\n";
+    if (cgen_debug)
+        errs() << "Boolean Constant" << "\n";
 
-  return ConstantInt::get(env->i1, (this->val)? 1 : 0);
+    return ConstantInt::get(env->i1, (this->val) ? 1 : 0);
 }
 
 Value *plus_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "plus" << "\n";
+    if (cgen_debug)
+        errs() << "plus" << "\n";
 
-  Value *lhs = e1->code(env);
-  Value *rhs = e2->code(env);
-  if (!lhs || !rhs) return nullptr;
+    Value *lhs = e1->code(env);
+    Value *rhs = e2->code(env);
+    if (!lhs || !rhs) return nullptr;
 
-  return env->builder.CreateAdd(lhs, rhs, "addtmp");
+    return env->builder.CreateAdd(lhs, rhs, "addtmp");
 }
 
 Value *sub_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "sub" << "\n";
+    if (cgen_debug)
+        errs() << "sub" << "\n";
 
-  Value *lhs = e1->code(env);
-  Value *rhs = e2->code(env);
-  if (!lhs || !rhs) return nullptr;
+    Value *lhs = e1->code(env);
+    Value *rhs = e2->code(env);
+    if (!lhs || !rhs) return nullptr;
 
-  return env->builder.CreateSub(lhs, rhs, "subtmp");
+    return env->builder.CreateSub(lhs, rhs, "subtmp");
 }
 
 Value *mul_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "mul" << "\n";
+    if (cgen_debug)
+        errs() << "mul" << "\n";
 
-  Value *lhs = e1->code(env);
+    Value *lhs = e1->code(env);
     Value *rhs = e2->code(env);
     if (!lhs || !rhs) return nullptr;
 
@@ -393,10 +415,10 @@ Value *mul_class::code(CgenEnvironment *env) {
 }
 
 Value *divide_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "div" << "\n";
+    if (cgen_debug)
+        errs() << "div" << "\n";
 
-  Value *lhs = e1->code(env);
+    Value *lhs = e1->code(env);
     Value *rhs = e2->code(env);
     if (!lhs || !rhs) return nullptr;
 
@@ -464,132 +486,116 @@ Value *block_class::code(CgenEnvironment *env) {
 }
 
 Value *let_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "let" << "\n";
+    if (cgen_debug)
+        errs() << "let" << "\n";
 
-  Value *init_val = nullptr;
-  if(this->init == no_expr()){
-    init_val = env->getDefaultInit(this->type_decl);
-  }
+    Value *init_val = init_val = this->init->code(env);
+    if (init_val == nullptr) {  // returns nullptr bc init was no_exp()
+        init_val = env->getDefaultInit(this->type_decl);
+    }
 
-  Type *this_type = env->classTable.get_llvm_type_from_symbol(this->type_decl);
+    if (init_val == nullptr) {
+        errs() << "OH THE HORROR" << "\n";
+    }
 
-  env->openScope();
+    Type *this_type = env->classTable.get_llvm_type_from_symbol(this->type_decl);
 
-  Value *val_ptr = env->builder.CreateAlloca(this_type);
+    env->openScope();
 
-  env->addBinding(this->identifier, val_ptr);
+    Value *val_ptr = env->builder.CreateAlloca(this_type);
+    env->builder.CreateStore(init_val, val_ptr);
 
-  Value *body_ret_val = this->body->code(env);
+    env->addBinding(this->identifier, val_ptr);
 
-  env->closeScope();
+    Value *body_ret_val = this->body->code(env);
 
-  return body_ret_val;
+    env->closeScope();
+
+    return body_ret_val;
 }
 
 Value *assign_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "assign" << "\n";
+    if (cgen_debug)
+        errs() << "assign" << "\n";
 
-  // TODO: add code here and replace `return nullptr`
-  // Copy this from your Lab 2, but update for objects
-  // HINT: You will need to use builder.CreateStructGEP()
-  //       for attributes somehow.
+    // TODO: add code here and replace `return nullptr`
+    // Copy this from your Lab 2, but update for objects
+    // HINT: You will need to use builder.CreateStructGEP()
+    //       for attributes somehow.
 
-  Value *new_val = this->expr->code(env);
+    Value *new_val = this->expr->code(env);
 
-  Value *obj_ptr = env->findInScopes(this->name);
+    Value *obj_ptr = env->findInScopes(this->name);
 
-  if(obj_ptr != nullptr){
-    env->builder.CreateStore(new_val, obj_ptr);
+    if (obj_ptr != nullptr) {
+        env->builder.CreateStore(new_val, obj_ptr);
+        return new_val;
+    }
+
+    CgenNode *cur_class = env->getClass();
+
+    Value *self_ptr = env->findInScopes(self);
+
+    auto [_, item_ptr] = env->get_attr_ptr(cur_class, this->name->get_string(), self_ptr);
+
+    env->builder.CreateStore(new_val, item_ptr);
+
     return new_val;
-  }
-
-  CgenNode *cur_class = env->getClass();
-
-  Value *self_ptr = env->findInScopes(self);
-  
-  Value *item_ptr = env->get_attr_ptr(cur_class, this->name->get_string(), self_ptr);
-
-  env->builder.CreateStore(new_val, item_ptr);
-
-  return new_val;
 }
 
 Value *cond_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
+    if (cgen_debug)
         errs() << "cond" << "\n";
 
     // TODO: Copy this from your Lab 2 to start, but update to handle
     //       cases where the branches are not the same type.
     // HINT: This is where boxing might happen.
     // HINT: Unboxing can only happen with a case expression
-    Value *cond = pred->code(env);
+
+    Value *cond = this->pred->code(env);
+
     if (!cond) {
         return nullptr;
     }
-    Value *alloc_val = nullptr;
-    Type *alloc_ty = nullptr;
 
-    // Create if block
-    BasicBlock *if_bb = env->newBbAtFend("if");
-    // Jump to if block
-    env->builder.CreateBr(if_bb);
-    // Create then, else and merge blocks
-    BasicBlock *then_bb = env->newBbAtFend("then");
-    BasicBlock *else_bb = env->newBbAtFend("else");
-    BasicBlock *merge_bb = env->newBbAtFend("merge");
+    BasicBlock *prev_BB = env->builder.GetInsertBlock();
 
-    // Get thier types
-    Value *Then = then_exp->code(env);
-    Type *then_ty = Then->getType();
-    Value *Else = else_exp->code(env);
-    Type *else_ty = Else->getType();
+    BasicBlock *then_BB = BasicBlock::Create(env->context, "then_BB", env->getFunction());
+    env->builder.SetInsertPoint(then_BB);
+    Value *then_ret = this->then_exp->code(env);
+    BasicBlock *finish_then_BB = env->builder.GetInsertBlock();
 
-    // Chen-Tao: for Lab 3, we need to handle the case of different types in condition branches of cond
-    if (isa<IntegerType>(then_ty) && isa<IntegerType>(else_ty)) {
-        unsigned then_exp_bit_width = cast<IntegerType>(then_ty)->getBitWidth();
-        unsigned else_exp_bit_width = cast<IntegerType>(else_ty)->getBitWidth();
+    BasicBlock *else_BB = BasicBlock::Create(env->context, "else_BB", env->getFunction());
+    env->builder.SetInsertPoint(else_BB);
+    Value *else_ret = this->else_exp->code(env);
+    BasicBlock *finish_else_BB = env->builder.GetInsertBlock();
 
-        if (then_exp_bit_width != else_exp_bit_width) {
-            alloc_ty = env->classTable.i32;
-        } else {
-            if (then_exp_bit_width == 1) {
-                alloc_ty = env->classTable.i1;
-            } else {
-                alloc_ty = env->classTable.i32;
-            }
-        }
-    } else {
-        alloc_ty = PointerType::get(env->context, 0);
-    }
+    BasicBlock *resolve_BB = BasicBlock::Create(env->context, "merge_BB", env->getFunction());
 
-    // Set insertion point to if block, allocate memory and jump to then or else block
-    env->builder.SetInsertPoint(if_bb);
-    alloc_val = env->builder.CreateAlloca(alloc_ty);
-    env->builder.CreateCondBr(cond, then_bb, else_bb);
+    Type *then_ty = env->classTable.get_llvm_type_from_symbol(this->then_exp->get_type());
+    Type *else_ty = env->classTable.get_llvm_type_from_symbol(this->else_exp->get_type());
 
-    // then block
-    env->builder.SetInsertPoint(then_bb);
-    Value *then_block_ret_val = then_exp->code(env);
-    env->builder.CreateStore(then_block_ret_val, alloc_val);
-    env->builder.CreateBr(merge_bb);
+    env->builder.SetInsertPoint(prev_BB);
+    env->builder.CreateCondBr(cond, then_BB, else_BB);
 
-    // else block
-    env->builder.SetInsertPoint(else_bb);
-    Value *else_block_ret_val = else_exp->code(env);
-    env->builder.CreateStore(else_block_ret_val, alloc_val);
-    env->builder.CreateBr(merge_bb);
+    env->builder.SetInsertPoint(finish_then_BB);
+    env->builder.CreateBr(resolve_BB);
 
-    // merge block
-    env->builder.SetInsertPoint(merge_bb);
-    // Finally, load the result and return it
-    Value *phi_func = env->builder.CreateLoad(alloc_ty, alloc_val, "iftmp");
-    return phi_func;
+    env->builder.SetInsertPoint(finish_else_BB);
+    env->builder.CreateBr(resolve_BB);
+
+    // Waahhh Wahhh, we are doing cp1 so we forget about finding common obj type
+
+    env->builder.SetInsertPoint(resolve_BB);
+    PHINode *phi = env->builder.CreatePHI(then_ty, 2);
+    phi->addIncoming(then_ret, finish_then_BB);
+    phi->addIncoming(else_ret, finish_else_BB);
+
+    return phi;
 }
 
 Value *loop_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
+    if (cgen_debug)
         errs() << "loop" << "\n";
 
     BasicBlock *loop_pred = env->newBbAtFend("loop_pred");
@@ -611,25 +617,40 @@ Value *loop_class::code(CgenEnvironment *env) {
 }
 
 Value *object_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "Object" << "\n";
+    if (cgen_debug)
+        errs() << this->name->get_string() << " Object" << "\n";
 
-  // TODO: Copy this from your Lab 2, but you will need to update
-  //       for real objects and for attributes.
-  // HINT: There are no nested attributes and attributes cannot be
-  //       overridden in Cool.
-  // HINT: You will need to use builder.CreateStructGEP()
+    // TODO: Copy this from your Lab 2, but you will need to update
+    //       for real objects and for attributes.
+    // HINT: There are no nested attributes and attributes cannot be
+    //       overridden in Cool.
+    // HINT: You will need to use builder.CreateStructGEP()
 
-  return nullptr;
+    Type *obj_type = env->classTable.get_llvm_type_from_symbol(this->type);
+
+    Value *obj_ptr = env->findInScopes(this->name);
+
+    if (obj_ptr != nullptr) {
+        return env->builder.CreateLoad(obj_type, obj_ptr);
+    }
+
+    CgenNode *cur_class = env->getClass();
+
+    Value *self_ptr = env->findInScopes(self);
+
+    auto [item_ty, item_ptr] = env->get_attr_ptr(cur_class, this->name->get_string(), self_ptr);
+    errs() << "Name: " << this->name->get_string() << "\tInt: " << (item_ty == env->i32) << "\tBool: " << (item_ty == env->i1) << "\tptr: " << (item_ty == env->ptr) << "\n";
+    errs() << item_ptr << "\n";
+    return env->builder.CreateLoad(item_ty, item_ptr);
 }
 
 Value *no_expr_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "No_expr" << "\n";
+    if (cgen_debug)
+        errs() << "No_expr" << "\n";
 
-  // HINT: Already implemented
-  // HINT: Check the methods of this class
-  return nullptr;
+    // HINT: Already implemented
+    // HINT: Check the methods of this class
+    return nullptr;
 }
 
 //*****************************************************************
@@ -638,76 +659,76 @@ Value *no_expr_class::code(CgenEnvironment *env) {
 //*****************************************************************
 
 Value *isvoid_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "isvoid" << "\n";
-  // TODO: add code here and replace `return nullptr`
-  //       This is for the dynamic test of an object being void
-  // TODO: CP2 -- not needed in CP1
-  // HINT: Consider builder.CreateIsNull()
-  return nullptr;
+    if (cgen_debug)
+        errs() << "isvoid" << "\n";
+    // TODO: add code here and replace `return nullptr`
+    //       This is for the dynamic test of an object being void
+    // TODO: CP2 -- not needed in CP1
+    // HINT: Consider builder.CreateIsNull()
+    return nullptr;
 }
 
 Value *dispatch_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "dispatch" << "\n";
-  // TODO: add code here and replace `return nullptr`
-  // TODO: CP2 -- not needed in CP1
+    if (cgen_debug)
+        errs() << "dispatch" << "\n";
+    // TODO: add code here and replace `return nullptr`
+    // TODO: CP2 -- not needed in CP1
 
-  // HINT: Cool actually passes objects by reference and Ints and Bools
-  //       by unboxed value -- this is what LLVM already does for calls.
-  // HINT: Don't forget about vtables.
-  // HINT: Add a dynamic check for void dispatch (i.e., on this->expr).
-  // HINT: To use a function pointer, you will need to:
-  //       1. Get the value of the function pointer
-  //       2. Create the type for the function using llvm::FunctionType::get()
-  //       3. Create the call: builder.CreateCall(funcTy, funcPtr, formals);
-  // HINT: The return type of the method is "type"
-  // HINT: The method name is "name"
-  // HINT: The method arguments are "actual" (and it's a list)
-  // HINT: The method is called on "expr"
-  // HINT: You may find the following helpful (but you can get by with it):
-  //       llvm::StructType::getTypeByName()
+    // HINT: Cool actually passes objects by reference and Ints and Bools
+    //       by unboxed value -- this is what LLVM already does for calls.
+    // HINT: Don't forget about vtables.
+    // HINT: Add a dynamic check for void dispatch (i.e., on this->expr).
+    // HINT: To use a function pointer, you will need to:
+    //       1. Get the value of the function pointer
+    //       2. Create the type for the function using llvm::FunctionType::get()
+    //       3. Create the call: builder.CreateCall(funcTy, funcPtr, formals);
+    // HINT: The return type of the method is "type"
+    // HINT: The method name is "name"
+    // HINT: The method arguments are "actual" (and it's a list)
+    // HINT: The method is called on "expr"
+    // HINT: You may find the following helpful (but you can get by with it):
+    //       llvm::StructType::getTypeByName()
 
-  return nullptr;
+    return nullptr;
 }
 
 Value *static_dispatch_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "static dispatch" << "\n";
-  // TODO: add code here and replace `return nullptr`
-  // TODO: CP2 -- not needed in CP1
+    if (cgen_debug)
+        errs() << "static dispatch" << "\n";
+    // TODO: add code here and replace `return nullptr`
+    // TODO: CP2 -- not needed in CP1
 
-  // HINT: Cool actually passes objects by reference and Ints and Bools
-  //       by unboxed value -- this is what LLVM already does for calls.
-  // HINT: Don't forget about vtables.
-  // HINT: Add a dynamic check for void dispatch (i.e., on this->expr).
+    // HINT: Cool actually passes objects by reference and Ints and Bools
+    //       by unboxed value -- this is what LLVM already does for calls.
+    // HINT: Don't forget about vtables.
+    // HINT: Add a dynamic check for void dispatch (i.e., on this->expr).
 
-  return nullptr;
+    return nullptr;
 }
 
 Value *string_const_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "string_const" << "\n";
-  // TODO: add code here and replace `return nullptr`
-  // TODO: CP2 -- not needed in CP1
+    if (cgen_debug)
+        errs() << "string_const" << "\n";
+    // TODO: add code here and replace `return nullptr`
+    // TODO: CP2 -- not needed in CP1
 
-  // HINT: The easiest way to handle this is to just box a char
-  //       string every time. You can also choose to box the string
-  //       just once, but that is more complicated.
-  // HINT: The coolrt runtime library implements String_new().
+    // HINT: The easiest way to handle this is to just box a char
+    //       string every time. You can also choose to box the string
+    //       just once, but that is more complicated.
+    // HINT: The coolrt runtime library implements String_new().
 
-  return nullptr;
+    return nullptr;
 }
 
 // Handle a Cool case expression (selecting based on the type of an object)
 Value *typcase_class::code(CgenEnvironment *env) {
-  if (cgen_debug)
-    errs() << "typecase::code()" << "\n";
+    if (cgen_debug)
+        errs() << "typecase::code()" << "\n";
 
-  // TODO: add code here and replace `return nullptr`
-  // TODO: CP3 -- not needed in CP1 or CP2
+    // TODO: add code here and replace `return nullptr`
+    // TODO: CP3 -- not needed in CP1 or CP2
 
-  return nullptr;
+    return nullptr;
 }
 
 // Handle one branch of a Cool case expression.
@@ -717,8 +738,8 @@ Value *typcase_class::code(CgenEnvironment *env) {
 // See the Lab 3 handout for more information about our use of class tags.
 Value *branch_class::code(Value *expr_val, Value *tag, Type *join_type,
                           CgenEnvironment *env) {
-  // TODO: add code here and replace `return nullptr`
-  // TODO: CP3 -- not needed in CP1 or CP2
+    // TODO: add code here and replace `return nullptr`
+    // TODO: CP3 -- not needed in CP1 or CP2
 
-  return nullptr;
+    return nullptr;
 }

@@ -76,6 +76,7 @@ public:
   llvm::Type *getType(Symbol decl) const;
 
   llvm::Value *getDefaultInit(Symbol type) const;
+  llvm::Value *getDefaultInit(Type *type) const;
 
   // Implement and use the following to handle boxing and unboxing
 
@@ -84,14 +85,22 @@ public:
 
   // You may add more functions here as necessary
 
-  Value *get_attr_ptr(CgenNode *cur_class, std::string name, Value *obj_ptr){
-    int idx = cur_class->find_idx(name);
-    if(idx == -1){
-      return nullptr;
-    }
+  std::tuple<Type *, Value *>get_attr_ptr(CgenNode *cur_class, std::string name, Value *obj_ptr){
+    int idx = curClass->find_idx(name);
 
-    return this->builder.CreateStructGEP(cur_class->getType(), obj_ptr, idx);
+    while(idx == -1){
+      // offset += rents->attribute_layout.size() + 1;
+      // rents = rents->getParentnd();
+      // idx = rents->find_idx(name);
+      return std::tuple<Type *, Value *>(nullptr, nullptr);
+    }
+    
+    auto [attr_ty, _] = curClass->attribute_layout[idx-1];
+    Value *attr_ptr = this->builder.CreateStructGEP(cur_class->getType(), obj_ptr, idx);
+
+    return std::tuple<Type *, Value *>(attr_ty, attr_ptr);
   }
+  
 
 private:
   cool::SymbolTable<llvm::Value> varTable;

@@ -371,8 +371,8 @@ void CgenClassTable::codeModule() {
 
   // We'll use the same structure as Lab 2 for Lab 3 Ccheckpoint 1
   // After that we will just treat Main_main as a regular class and method
-  CgenNode *mainNode = getMainMain(root());
-  mainNode->codegenMainmain();
+  // CgenNode *mainNode = getMainMain(root());
+  // mainNode->codegenMainmain();
 
   // This function will create the main() function that starts the Cool program
   // HINT: This function is independent of the program itself
@@ -385,6 +385,13 @@ void CgenClassTable::codeClasses(CgenNode *c) {
   // HINT: Follow our regular approach of recursing down the tree, but
   //       you will generate code for the base class before the derived
   //       classes (unlike for expressions, where you generate bottom-up).
+
+  c->codeClass();
+  for (auto child : c->getChildren()){
+    errs() << "This class: " << c->get_name() << "\n";
+    errs() << "CHild class: " << child->get_name() << "\n";
+    this->codeClasses(child);
+  }
 }
 
 // Create global definitions for constant Cool objects
