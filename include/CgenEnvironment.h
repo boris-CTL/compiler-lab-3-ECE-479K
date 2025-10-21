@@ -15,6 +15,53 @@
 // variables are declared, and so on. CgenEnvironment is also a good place
 // to put non-local information you will need during code generation. Two
 // examples are the current CgenNode and the current Function.
+
+namespace cool
+{
+  template <class T, class V>
+  class SymbolTablePlusType
+  {
+    private:
+      using TableEntry = std::pair<T *, V *>;
+      using Scope = std::unordered_map<Symbol, TableEntry>;
+
+      std::vector<Scope> scopes;
+
+    public:
+      SymbolTablePlusType() = default;
+
+      void enterscope() { this->scopes.emplace_back(); }
+      void exitscope()
+      {
+        assert(!this->scopes.empty() &&
+          "exitscope: Can't remove scope from an empty symbol table.");
+        this->scopes.pop_back();
+      }
+
+      void insert(Symbol const &k, T *type, V *v)
+      {
+        assert(!this->scopes.empty() &&
+          "insert: Can't add a symbol without a scope.");
+        assert(v && "insert: Can't add a nullptr value.");
+        this->scopes.back().emplace(k, std::make_pair(type, v));
+      }
+
+      TableEntry find_in_scopes(Symbol const &k) const
+      {
+        for (auto it = this->scopes.rbegin(); it != this->scopes.rend(); ++it)
+        {
+          auto entry = it->find(k);
+          if (entry != it->end())
+          {
+            return entry->second;
+          }
+        }
+        return {nullptr, nullptr};
+      }
+  };
+}
+
+
 class CgenEnvironment {
 public:
   // Class CgenEnvironment should be constructed by a class prior to code
@@ -41,10 +88,10 @@ public:
   CgenNode *typeToClass(Symbol t) const;
 
   // NOTE: You should use cool tree type information
-  llvm::Value *findInScopes(Symbol name);
+  std::pair<llvm::Type *, llvm::Value *> findInScopes(Symbol name);
 
-  void addBinding(Symbol name, llvm::Value *var) {
-    varTable.insert(name, var);
+  void addBinding(Symbol name, llvm::Value *var, llvm::Type *type) {
+    varTable.insert(name, type, var);
   }
   void openScope() { varTable.enterscope(); }
   void closeScope() { varTable.exitscope(); }
@@ -100,11 +147,52 @@ public:
 
     return std::tuple<Type *, Value *>(attr_ty, attr_ptr);
   }
+
+  void set_inst(llvm::Value *val) {
+    this->current_instance = val;
+  }
   
+  void set_par(CgenNode *cls) { current_par_class = cls; }
+
+  bool check_if_inherited() {
+    bool ret = (curClass != current_par_class);
+    return ret;
+  }
+
+  llvm::Value *Boxing(llvm::Value *primitiv) {
+    llvm::Type *obj_type;
+    llvm::Value *obj_being_boxed;
+    llvm::FunctionType *func_type = llvm::FunctionType::get(classTable.ptr, false);
+    auto primitive_type = primitiv->getType();
+
+    if (primitive_type == classTable.i32) {
+      obj_type = llvm::StructType::getTypeByName(context, "Int");
+      obj_being_boxed = builder.CreateCall(theModule.getOrInsertFunction("Int_new", func_type));
+    } else if (primitive_type == classTable.i1) {
+      obj_type = llvm::StructType::getTypeByName(context, "Bool");
+      obj_being_boxed = builder.CreateCall(theModule.getOrInsertFunction("Bool_new", func_type));
+    } else if (primitive_type == classTable.ptr) {
+      obj_type = llvm::StructType::getTypeByName(context, "String");
+      obj_being_boxed = builder.CreateCall(theModule.getOrInsertFunction("String_new", func_type));
+    }
+
+    llvm::Value *address_of_val = builder.CreateStructGEP(obj_type, obj_being_boxed, 1);
+    builder.CreateStore(primitiv, address_of_val);
+    return obj_being_boxed;
+  }
+
+  llvm::Value *get_inst() {
+    return this->current_instance;
+  }
+
 
 private:
-  cool::SymbolTable<llvm::Value> varTable;
+  // Augument varTable
+  // cool::SymbolTable<llvm::Value> varTable;
+  cool::SymbolTablePlusType<llvm::Type, llvm::Value> varTable;
   CgenNode *curClass;
+  llvm::Value *current_instance;
+  CgenNode *current_par_class;
 
 public:
   CgenClassTable &classTable;
@@ -115,7 +203,7 @@ public:
   llvm::Module &theModule;
 
   // The following types are declared here for convenience.
-  llvm::Type *i64, *i32, *i8, *i1, *voidTy;
-  llvm::PointerType *ptr;
+  llvm::Type *i64, *i32, *i8, *i1, *voidTy, *ptr;
+  // llvm::PointerType *ptr;
 };
 #endif // CGENENVIRONMENT_H

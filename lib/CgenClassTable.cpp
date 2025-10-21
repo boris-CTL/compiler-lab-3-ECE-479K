@@ -371,8 +371,8 @@ void CgenClassTable::codeModule() {
 
   // We'll use the same structure as Lab 2 for Lab 3 Ccheckpoint 1
   // After that we will just treat Main_main as a regular class and method
-  // CgenNode *mainNode = getMainMain(root());
-  // mainNode->codegenMainmain();
+  CgenNode *mainNode = getMainMain(root());
+  mainNode->codegenMainmain();
 
   // This function will create the main() function that starts the Cool program
   // HINT: This function is independent of the program itself
@@ -401,6 +401,7 @@ void CgenClassTable::codeConstants() {
   //       of the ClassTable.Las
   // HINT: You will need to generate code for the string constants
   //       in/using the string table.
+  stringtable.code_string_table(this);
 }
 
 // Get the root of the class tree.
@@ -431,6 +432,21 @@ Function *CgenClassTable::createLlvmFunction(std::string const &funcName,
     llvm_unreachable("Function creation failed");
   }
   return func;
+}
+
+std::pair<FunctionType*, Function*> CgenClassTable::createLlvmFunctionDetails(std::string const &funcName,
+                                               Type *retType,
+                                               ArrayRef<Type *> argTypes,
+                                               bool isVarArgs) {
+  // assert(retType);
+  FunctionType *ft = FunctionType::get(retType, argTypes, isVarArgs);
+  Function *func = Function::Create(ft, Function::ExternalLinkage, funcName,
+                                    this->theModule);
+  if (!func) {
+    errs() << "Function creation failed for function " << funcName;
+    llvm_unreachable("Function creation failed");
+  }
+  return {ft, func};
 }
 
 void program_class::cgen(std::optional<std::string> const &outfile) {
@@ -489,4 +505,5 @@ void StringEntry::code_def(CgenClassTable *ct) {
   // TODO: depending on how you choose to represent Cool strings, you may need
   //       to do additional things here beyond defining the global char string
   //       constant.
+  ct->builder.CreateGlobalString(this->get_string(), this->get_string());
 }

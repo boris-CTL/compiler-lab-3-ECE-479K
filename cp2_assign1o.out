@@ -1,0 +1,13 @@
+Building CgenClassTable
+This class: 0x7b9e3f220448
+CHild class: 0x7b9e3f2202c8
+This class: 0x7b9e3f220448
+CHild class: 0x7b9e3f220748
+This class: 0x7b9e3f220448
+CHild class: 0x7b9e3f2206c8
+This class: 0x7b9e3f220448
+CHild class: 0x7b9e3f220148
+This class: 0x7b9e3f220148
+CHild class: 0x7b9e3f2200c8
+method
+/usr/include/llvm/Support/Casting.h:static bool llvm::isa_impl_cl<llvm::Function, const llvm::Value *>::doit(const From *) [To = llvm::Function, From = const llvm::Value *]:109: assertion Val && "isa<> used on a null pointer" failed

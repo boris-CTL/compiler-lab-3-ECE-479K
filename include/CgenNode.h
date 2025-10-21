@@ -94,6 +94,85 @@ public:
   // TODO: Complete the implementation of the following function
   void codegenMainmain();
 
+  llvm::SmallVector<llvm::Type *> get_feature_type() {
+        return list_of_types_of_features;
+  }
+  
+  void insert_method_body(llvm::Constant *c) {
+    vtable_const_list.insert(vtable_const_list.begin(), c);
+    vtable_ty_list.insert(vtable_ty_list.begin(), c->getType());
+  }
+
+  llvm::SmallVector<llvm::Type *> get_vtable_ty_list() {
+    return vtable_ty_list;
+  }
+
+  llvm::SmallVector<llvm::Constant *> get_vtable_const_list() {
+    return vtable_const_list;
+  }
+
+  void push_attributes(std::string attr, llvm::Type *llvm_type) {
+      list_names_of_attributes.emplace_back(attr);
+      list_of_types_of_features.emplace_back(llvm_type);
+  }
+
+  bool check_vtable(llvm::Constant *c)
+  {
+    auto vtable_size = vtable_const_list.size();
+    if (vtable_size <= 2)
+    {
+      vtable_const_list.emplace_back(c);
+      vtable_ty_list.emplace_back(c->getType());
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  void push_method(llvm::Constant *c) {
+    bool checking_res = check_vtable(c);
+    if (checking_res) {
+      return;
+    }
+
+    StringRef method_given = c->getName();
+    size_t substring_pos = method_given.find("_");
+    StringRef root_of_given_method = method_given.substr(substring_pos + 1, method_given.size());
+    bool if_changed = false;
+    for (int i = 0; i < vtable_const_list.size(); i++) {
+      StringRef cur_method = vtable_const_list[i]->getName();
+      size_t substr_pos_cur = cur_method.find("_");
+      StringRef cur_root = cur_method.substr(substr_pos_cur + 1,	cur_method.size());
+
+      if (cur_root == root_of_given_method) {
+        vtable_const_list[i] = c;
+        if_changed = true;
+        break;
+      }
+    }
+    if (!if_changed) {
+      vtable_const_list.emplace_back(c);
+      vtable_ty_list.emplace_back(c->getType());
+    }
+  }
+
+  llvm::StructType *get_struct_type() {
+    return struct_type;
+  }
+
+  std::pair<int, llvm::Type*> get_type_of_attribute(std::string given_name) {
+    int idx = 0;
+    for (auto const &name: list_names_of_attributes) {
+      if (name == given_name) {
+	      return {idx, list_of_types_of_features[idx]};
+      }
+      idx++;
+    }
+    return {-27, nullptr};
+  }
+
+
 private:
   CgenNode *parentnd;                     // Parent of class
   llvm::SmallVector<CgenNode *> children; // Children of class
@@ -104,6 +183,18 @@ private:
 
   mutable llvm::StructType *body = nullptr;
   mutable llvm::StructType *vtable = nullptr;
+  llvm::GlobalVariable *name_str;
+
+  llvm::SmallVector<llvm::Type *> list_of_types_of_features;
+  llvm::SmallVector<std::string> list_names_of_attributes;
+  llvm::StructType *struct_type;
+  llvm::StructType *struct_type_of_vtable;
+  // llvm::GlobalVariable *vtable;
+  llvm::GlobalVariable *vtable_global_var;
+
+  llvm::SmallVector<llvm::Type *> vtable_ty_list;
+  llvm::SmallVector<llvm::Constant *> vtable_const_list; // vtable instance in global
+  llvm::SmallVector<std::string> method_name;
 };
 
 

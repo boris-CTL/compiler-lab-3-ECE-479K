@@ -20,7 +20,7 @@ CgenNode *CgenEnvironment::typeToClass(Symbol t) const {
   return classTable.find_in_scopes(t);
 }
 
-llvm::Value *CgenEnvironment::findInScopes(Symbol name) {
+std::pair<llvm::Type *, llvm::Value *>CgenEnvironment::findInScopes(Symbol name) {
   return this->varTable.find_in_scopes(name);
 }
 

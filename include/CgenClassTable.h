@@ -10,6 +10,8 @@
 #include <llvm/IR/NoFolder.h>
 #include <llvm/Support/raw_ostream.h>
 
+using namespace llvm;
+
 class CgenNode;
 
 /*********************************************************************
@@ -90,6 +92,11 @@ public:
                                        llvm::ArrayRef<llvm::Type *> argTypes,
                                        bool isVarArgs);
 
+  std::pair<FunctionType*, Function*> createLlvmFunctionDetails(std::string const &funcName,
+                                       llvm::Type *retType,
+                                       llvm::ArrayRef<llvm::Type *> argTypes,
+                                       bool isVarArgs);
+
   // TODO: Add more utility functions here if you find them useful,
   //       e.g., getting an LLVM type (i32, ptr, Main, ...) for a
   //       Cool type (Symbol), or any other helper functions that you
@@ -99,11 +106,16 @@ public:
   //       instead for the appropriate class.
 
   llvm::Type *get_llvm_type_from_symbol(Symbol sym){
-    if(sym == Int){
+    llvm::Type *sym_type = llvm::StructType::getTypeByName(this->context, sym->get_string());
+    if(sym == Int or sym == prim_int){
       return i32;
-    }else if(sym == Bool){
+    }else if(sym == Bool or sym == prim_bool){
       return i1;
-    }else{
+    }else if(sym == prim_string or sym->get_string() == "sbyte*" or sym == String){
+      return ptr;
+    } else if(sym_type != nullptr){
+      return ptr;
+    } else {
       return ptr;
     }
   }
@@ -115,8 +127,8 @@ public:
   llvm::Module theModule;
 
   // The following types are declared here for convenience.
-  llvm::Type *i64, *i32, *i8, *i1, *voidTy;
-  llvm::PointerType *ptr;
+  llvm::Type *i64, *i32, *i8, *i1, *voidTy, *ptr;
+  // llvm::PointerType *ptr;
 };
 
 
