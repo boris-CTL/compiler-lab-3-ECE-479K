@@ -125,6 +125,11 @@ void CgenNode::layoutFeatures() {
     struct_type = StructType::create(classTable.context, getTypeName());
     std::stack<CgenNode *> inheritance_stack;
     CgenNode *current = this;
+
+    // Init
+    this->push_attributes("vtable_ptr", llvm::PointerType::get(classTable.context, 0));
+    this->push_attributes("self", llvm::PointerType::get(classTable.context, 0));
+
     while (current) {
       inheritance_stack.push(current);
       current = current->getParentnd();
@@ -371,18 +376,10 @@ void CgenNode::codeInitFunction(CgenEnvironment *env) {
 
     int index = 0;
     
-    // 只有基本類才有 vtable 和 self 指標 (AI生的)
-    if (this->name == Object || this->name == IO || this->name == Int || this->name == Bool || this->name == String) {
-        Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-        env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
-        pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-        env->builder.CreateStore(call_instruction, pointer_at_field);
-    }
-    
-    // Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-    // env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
-    // pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-    // env->builder.CreateStore(call_instruction, pointer_at_field);
+    Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+    env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
+    pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+    env->builder.CreateStore(call_instruction, pointer_at_field);
 
     env->set_inst(call_instruction);
 
