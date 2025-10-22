@@ -224,7 +224,11 @@ void method_class::layout_feature(CgenNode *cls, CgenNode *par) {
         list_of_arguments_type.emplace_back(formal_type);
     }
     // CTL: SUSSSSSSSSSSSSSSSS
-    auto [ft, func] = classTab.createLlvmFunctionDetails(method_name, method_ret_type, list_of_arguments_type, false);
+    // auto [ft, func] = classTab.createLlvmFunctionDetails(method_name, method_ret_type, list_of_arguments_type, false);
+    FunctionType *ft = FunctionType::get(method_ret_type, list_of_arguments_type, false);
+    Function *func = Function::Create(ft, Function::ExternalLinkage,
+                    method_name,
+                    classTab.theModule);
     cls->push_method(ConstantExpr::getBitCast(func, PointerType::get(ft, 0)));
 }
 
@@ -392,7 +396,7 @@ void CgenNode::codeInitFunction(CgenEnvironment *env) {
 
         for (auto const &feature : current->features) {
             Value *r_val = feature->code(env);
-            if (!isa<Function>(r_val) and r_val) {
+            if (r_val and !isa<Function>(r_val)) {
                 Value *ptr_at_Field = env->builder.CreateStructGEP(current_struct_type,
                                         call_instruction,
                                         index);
@@ -428,9 +432,9 @@ Value *attr_class::code(CgenEnvironment *env) {
 
     auto [index, type_of_attribute] = env->getClass()->get_type_of_attribute(name->get_string());
 
-    if (isa<PointerType>(type_of_attribute) and !ret_val) {
+    if (!ret_val and isa<PointerType>(type_of_attribute)) {
         ret_val = ConstantPointerNull::get(dyn_cast<PointerType>(type_of_attribute));
-    } else if (isa<IntegerType>(type_of_attribute) and !ret_val) {
+    } else if (!ret_val and isa<IntegerType>(type_of_attribute)) {
         ret_val = ConstantInt::get(type_of_attribute, 0);
     }
 
@@ -451,6 +455,7 @@ Function *method_class::code(CgenEnvironment *env) {
 //   }
     Function *method_func = env->theModule.getFunction(full_method_name);
     if (method_func == nullptr or expr->no_code()) {
+        errs() << "method boris" << "\n";
       return method_func;
     }
 
@@ -473,7 +478,7 @@ Function *method_class::code(CgenEnvironment *env) {
     }
 
     Value *ret_val = expr->code(env);
-    if (isa<PointerType>(ret_type) and !ret_val)
+    if (!ret_val and isa<PointerType>(ret_type))
       ret_val = ConstantPointerNull::get(dyn_cast<PointerType>(ret_type));
 
     if (ret_val->getType() != ret_type)
@@ -1001,9 +1006,9 @@ Value *object_class::code(CgenEnvironment *env) {
     auto [obj_type, object_ptr] = env->findInScopes(this->name);
     if (obj_type != nullptr and object_ptr != nullptr) {
       return env->builder.CreateLoad(obj_type, object_ptr);
-    } else if (isa<IntegerType>(obj_type) and obj_type != nullptr) {
+    } else if (obj_type != nullptr and isa<IntegerType>(obj_type)) {
       return ConstantInt::get(obj_type, 0);
-    } else if (isa<PointerType>(obj_type) and obj_type != nullptr) {
+    } else if (obj_type != nullptr and isa<PointerType>(obj_type)) {
       return ConstantPointerNull::get(dyn_cast<PointerType>(obj_type));
     }
 

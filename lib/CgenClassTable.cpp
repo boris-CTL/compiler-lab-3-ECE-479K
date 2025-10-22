@@ -100,6 +100,7 @@ CgenClassTable::CgenClassTable(Classes classes)
   setup();
 
   // Second pass
+  // code gen
   codeModule();
   // Done with code generation: exit scopes
   exitscope();
