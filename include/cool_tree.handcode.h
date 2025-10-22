@@ -77,7 +77,7 @@ typedef Cases_class *Cases;
   void layout_feature(CgenNode *cls) override;                                 \
   void layout_feature(CgenNode *cls, CgenNode *par) override;                  \
   Symbol get_name() override { return name; }                                  \
-  llvm::SmallVector<llvm::Type *> list_of_arguments_type;                      \
+  // llvm::SmallVector<llvm::Type *> list_of_arguments_type;                      \
 
 #define method_EXTRAS                                                          \
   virtual Symbol get_return_type() { return return_type; }                     \

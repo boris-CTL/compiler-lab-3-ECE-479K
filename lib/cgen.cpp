@@ -169,12 +169,10 @@ void attr_class::layout_feature(CgenNode *cls) {
     if (attr_type == "Bool" or attr_type == "bool") {
         CgenClassTable &classTab = cls->getClasstable();
         cls->push_attributes(name->get_string(), llvm::Type::getInt1Ty(classTab.context));
-    }
-    if (attr_type == "Int" or attr_type == "int") {
+    } else if (attr_type == "Int" or attr_type == "int") {
         CgenClassTable &classTab = cls->getClasstable();
         cls->push_attributes(name->get_string(), llvm::Type::getInt32Ty(classTab.context));
-    }
-    if (attr_type == "sbyte*") {
+    } else if (attr_type == "sbyte*") {
         CgenClassTable &classTab = cls->getClasstable();
         cls->push_attributes(name->get_string(), llvm::PointerType::get(classTab.context, 0));
     } else {
@@ -201,13 +199,14 @@ void method_class::layout_feature(CgenNode *cls, CgenNode *par) {
     //       actual definition happening in the second pass (in code_class()).
     // HINT: Look at the definition of code_class in ClassTable or step through
     // debug.
-    bool flag = (cls == par);
+    
     CgenClassTable &classTab = cls->getClasstable();
     std::string method_name = cls->getFullMethodName(this->get_name()->get_string());
     if(classTab.theModule.getFunction(method_name)){
         return;
     }
 
+    bool flag = (cls == par);
     if (!flag) {
         std::string name_of_the_inherited_method = par->getFullMethodName(this->get_name()->get_string());
         Function *func = classTab.theModule.getFunction(name_of_the_inherited_method);
@@ -217,6 +216,7 @@ void method_class::layout_feature(CgenNode *cls, CgenNode *par) {
     }
 
     Type *method_ret_type = classTab.get_llvm_type_from_symbol(this->return_type);
+    llvm::SmallVector<llvm::Type *> list_of_arguments_type;
     list_of_arguments_type.emplace_back(PointerType::get(classTab.context, 0));
 
     for (auto const &formal: this->formals) {
@@ -224,11 +224,7 @@ void method_class::layout_feature(CgenNode *cls, CgenNode *par) {
         list_of_arguments_type.emplace_back(formal_type);
     }
     // CTL: SUSSSSSSSSSSSSSSSS
-    // auto [ft, func] = classTab.createLlvmFunctionDetails(method_name, method_ret_type, list_of_arguments_type, false);
-    FunctionType *ft = FunctionType::get(method_ret_type, list_of_arguments_type, false);
-    Function *func = Function::Create(ft, Function::ExternalLinkage,
-                    method_name,
-                    classTab.theModule);
+    auto [ft, func] = classTab.createLlvmFunctionDetails(method_name, method_ret_type, list_of_arguments_type, false);
     cls->push_method(ConstantExpr::getBitCast(func, PointerType::get(ft, 0)));
 }
 
@@ -374,11 +370,20 @@ void CgenNode::codeInitFunction(CgenEnvironment *env) {
     Value *call_instruction = env->builder.CreateCall(func_malloc_callee, {struct_size});
 
     int index = 0;
-    Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-    // auto global_name = env->theModule.getNamedGlobal(getVtableName());
-    env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
-    pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
-    env->builder.CreateStore(call_instruction, pointer_at_field); 
+    
+    // 只有基本類才有 vtable 和 self 指標 (AI生的)
+    if (this->name == Object || this->name == IO || this->name == Int || this->name == Bool || this->name == String) {
+        Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+        env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
+        pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+        env->builder.CreateStore(call_instruction, pointer_at_field);
+    }
+    
+    // Value *pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+    // env->builder.CreateStore(env->theModule.getNamedGlobal(getVtableName()), pointer_at_field);
+    // pointer_at_field = env->builder.CreateStructGEP(struct_type, call_instruction, index++);
+    // env->builder.CreateStore(call_instruction, pointer_at_field);
+
     env->set_inst(call_instruction);
 
 
@@ -1012,10 +1017,24 @@ Value *object_class::code(CgenEnvironment *env) {
       return ConstantPointerNull::get(dyn_cast<PointerType>(obj_type));
     }
 
+    // 特殊處理 self
+    if (this->name == self) {
+        return env->get_inst();
+    }
+
     CgenNode *cur_class = env->getClass();
     auto [index, type_of_attr] = cur_class->get_type_of_attribute(this->name->get_string());
-    Value *self = env->get_inst();
-    Value *attrPtr = env->builder.CreateStructGEP(cur_class->get_struct_type(), self, index);
+    
+    // 檢查是否找到屬性
+    if (type_of_attr == nullptr) {
+        // 屬性不存在，返回適當的預設值
+        if (cgen_debug)
+            errs() << "Warning: Attribute '" << this->name->get_string() << "' not found in class\n";
+        return ConstantPointerNull::get(PointerType::get(env->classTable.context, 0));
+    }
+    
+    Value *self_ptr = env->get_inst();
+    Value *attrPtr = env->builder.CreateStructGEP(cur_class->get_struct_type(), self_ptr, index);
     return env->builder.CreateLoad(type_of_attr, attrPtr);
 }
 
